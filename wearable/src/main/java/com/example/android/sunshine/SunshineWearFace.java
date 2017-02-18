@@ -356,8 +356,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             }
         }
 
-
-
         @Override
         public void onConnected(@Nullable Bundle bundle) {
             Log.d(TAG, "onConnected " + Long.toString(System.currentTimeMillis()));
