@@ -25,6 +25,7 @@ import com.example.android.sunshine.data.WeatherContract;
 import com.example.android.sunshine.utilities.NetworkUtils;
 import com.example.android.sunshine.utilities.NotificationUtils;
 import com.example.android.sunshine.utilities.OpenWeatherJsonUtils;
+import com.example.android.sunshine.utilities.SunshineWearFaceUtils;
 
 import java.net.URL;
 
@@ -75,6 +76,9 @@ public class SunshineSyncTask {
                 sunshineContentResolver.bulkInsert(
                         WeatherContract.WeatherEntry.CONTENT_URI,
                         weatherValues);
+
+                /* Sending today's weather data to the wearable */
+                 new SunshineWearFaceUtils().initialize(weatherValues[0], context);
 
                 /*
                  * Finally, after we insert data into the ContentProvider, determine whether or not
