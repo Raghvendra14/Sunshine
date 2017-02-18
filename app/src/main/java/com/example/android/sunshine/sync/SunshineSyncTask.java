@@ -78,7 +78,7 @@ public class SunshineSyncTask {
                         weatherValues);
 
                 /* Sending today's weather data to the wearable */
-                 new SunshineWearFaceUtils().initialize(weatherValues[0], context);
+                 new SunshineWearFaceUtils().initialize(context);
 
                 /*
                  * Finally, after we insert data into the ContentProvider, determine whether or not

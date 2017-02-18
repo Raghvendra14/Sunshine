@@ -40,7 +40,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.data.DataBuffer;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -62,6 +62,14 @@ public class SunshineWearFace extends CanvasWatchFaceService {
     private static final String TAG = SunshineWearFace.class.getSimpleName();
     private static final Typeface NORMAL_TYPEFACE =
             Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
+
+    private final String WEATHER_PATH = "/weather-info";
+    private final String MAX_TEMP = "max_temp";
+    private final String MIN_TEMP = "min_temp";
+    private final String WEATHER_ICON = "weather_icon";
+    String mMaxTemp;
+    String mMinTemp;
+    Asset mWeatherIcon;
 
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
@@ -105,6 +113,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(SunshineWearFace.this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
+                .addApi(Wearable.API)
                 .build();
 
         boolean mRegisteredTimeZoneReceiver = false;
@@ -112,6 +121,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         Paint mTextPaint;
         boolean mAmbient;
         Calendar mCalendar;
+        String mDataDelivered = "No";
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -131,6 +141,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
+            Log.d(TAG, "In onCreate: ");
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(SunshineWearFace.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
@@ -285,11 +296,12 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
 
-            String text = mAmbient
-                    ? String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
-                    mCalendar.get(Calendar.MINUTE))
-                    : String.format("%d:%02d:%02d", mCalendar.get(Calendar.HOUR),
-                    mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
+//            String text = mAmbient
+//                    ? String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
+//                    mCalendar.get(Calendar.MINUTE))
+//                    : String.format("%d:%02d:%02d", mCalendar.get(Calendar.HOUR),
+//                    mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
+            String text = mDataDelivered;
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
         }
 
@@ -330,17 +342,25 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             for (DataEvent dataEvent : dataEvents) {
                 if (dataEvent.getType() == DataEvent.TYPE_CHANGED) {
                     DataItem dataItem = dataEvent.getDataItem();
-                    DataMap dataMap = DataMapItem.fromDataItem(dataItem).getDataMap();
                     if (dataItem.getUri().getPath().equals(
-                            "/current-info")) {
-
+                            WEATHER_PATH)) {
+                        DataMap dataMap = DataMapItem.fromDataItem(dataItem).getDataMap();
+                        mMaxTemp = dataMap.getString(MAX_TEMP);
+                        mMinTemp = dataMap.getString(MIN_TEMP);
+                        mWeatherIcon = dataMap.getAsset(WEATHER_ICON);
+                        mDataDelivered = "Yes";
+                        Log.d(TAG, "In onDataChanged: " + mMaxTemp + " " + mMinTemp);
+                        invalidate();
                     }
                 }
             }
         }
 
+
+
         @Override
         public void onConnected(@Nullable Bundle bundle) {
+            Log.d(TAG, "onConnected " + Long.toString(System.currentTimeMillis()));
             if (Log.isLoggable(TAG, Log.DEBUG)) {
                 Log.d(TAG, "onConnected: " + bundle);
             }
