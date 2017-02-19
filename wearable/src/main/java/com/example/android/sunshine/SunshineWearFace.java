@@ -21,6 +21,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -49,6 +51,7 @@ import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -72,9 +75,9 @@ public class SunshineWearFace extends CanvasWatchFaceService {
     private final String MAX_TEMP = "max_temp";
     private final String MIN_TEMP = "min_temp";
     private final String WEATHER_ICON = "weather_icon";
-    String mMaxTemp;
-    String mMinTemp;
-    Asset mWeatherIcon;
+    private String mMaxTemp;
+    private String mMinTemp;
+    private Asset mWeatherIcon;
 
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
@@ -140,6 +143,8 @@ public class SunshineWearFace extends CanvasWatchFaceService {
 
         String mDataDelivered = "No";
 
+        private Bitmap mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -178,6 +183,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             Resources resources = SunshineWearFace.this.getResources();
             mTimeYOffset = resources.getDimension(R.dimen.digital_y_offset);
             mDateYOffset = resources.getDimension(R.dimen.digital_date_y_offset);
+            mWeatherYOffset = resources.getDimension(R.dimen.digital_weather_y_offset);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
@@ -326,6 +332,8 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                     mMinutePaint.setAntiAlias(!inAmbientMode);
                     mColonPaint.setAntiAlias(!inAmbientMode);
                     mDatePaint.setAntiAlias(!inAmbientMode);
+                    mMaxTempPaint.setAntiAlias(!inAmbientMode);
+                    mMinTempPaint.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
             }
@@ -406,6 +414,21 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             if (mMaxTemp != null && mMinTemp != null) {
 
                 float maxTextSize = mMaxTempPaint.measureText(mMaxTemp);
+                float minTextSize = mMinTempPaint.measureText(mMinTemp);
+
+                if (mAmbient) {
+                    float xAmbientOffset = bounds.centerX() - ((maxTextSize + minTextSize + 20) / 2);
+                    canvas.drawText(mMaxTemp, xAmbientOffset, mWeatherYOffset, mMaxTempPaint);
+                    canvas.drawText(mMinTemp, xAmbientOffset + maxTextSize + 20, mWeatherYOffset, mMinTempPaint);
+                } else {
+                    float mWeatherXOffset = bounds.centerX() - (maxTextSize / 2);
+                    float scaledWidth = (mMaxTempPaint.getTextSize() / mBitmap.getHeight()) * mBitmap.getWidth();
+                    Bitmap weatherIcon = Bitmap.createScaledBitmap(mBitmap, (int) scaledWidth, (int) mMaxTempPaint.getTextSize(), true);
+
+                    canvas.drawText(mMaxTemp, bounds.centerX() - ((weatherIcon.getWidth() / 2) + maxTextSize + 25), mWeatherYOffset, mMaxTempPaint);
+                    canvas.drawText(mMinTemp, bounds.centerX() + (weatherIcon.getWidth() / 2) + 25, mWeatherYOffset, mMinTempPaint);
+                    canvas.drawBitmap(weatherIcon, mWeatherXOffset, mWeatherYOffset - weatherIcon.getHeight(), null);
+                }
             }
 
 //            String text = mAmbient
@@ -460,12 +483,42 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                         mMaxTemp = dataMap.getString(MAX_TEMP);
                         mMinTemp = dataMap.getString(MIN_TEMP);
                         mWeatherIcon = dataMap.getAsset(WEATHER_ICON);
+                        Thread fetchingBitmap = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mBitmap = loadBitmapFromAsset(mWeatherIcon);
+                            }
+                        });
+                        fetchingBitmap.start();
+
                         mDataDelivered = "Yes";
                         Log.d(TAG, "In onDataChanged: " + mMaxTemp + " " + mMinTemp);
                         invalidate();
                     }
                 }
             }
+        }
+
+        private Bitmap loadBitmapFromAsset(Asset weatherIcon) {
+            if (weatherIcon == null) {
+                throw new IllegalArgumentException("Asset must be non-null");
+            }
+            ConnectionResult result =
+                    mGoogleApiClient.blockingConnect(30, TimeUnit.SECONDS);
+            if (!result.isSuccess()) {
+                return null;
+            }
+            // convert asset into a file descriptor and block until it's ready
+            InputStream assetInputStream = Wearable.DataApi.getFdForAsset(
+                    mGoogleApiClient, weatherIcon).await().getInputStream();
+            mGoogleApiClient.disconnect();
+
+            if (assetInputStream == null) {
+                Log.w(TAG, "Requested an unknown Asset.");
+                return null;
+            }
+            // decode the stream into a bitmap
+            return BitmapFactory.decodeStream(assetInputStream);
         }
 
         @Override
