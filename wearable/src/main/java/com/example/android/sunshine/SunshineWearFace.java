@@ -81,10 +81,15 @@ public class SunshineWearFace extends CanvasWatchFaceService {
     private Asset mWeatherIcon;
 
     /**
-     * Update rate in milliseconds for interactive mode. We update once a second since seconds are
-     * displayed in interactive mode.
+     * Update rate in milliseconds for interactive mode. We update twice a second to blink the
+     * colons.
      */
-    private static final long INTERACTIVE_UPDATE_RATE_MS = TimeUnit.SECONDS.toMillis(1);
+    private static final long NORMAL_UPDATE_RATE_MS = 500;
+
+    /**
+     * Update rate in milliseconds for mute mode. We update every minute, like in ambient mode.
+     */
+    private static final long MUTE_UPDATE_RATE_MS = TimeUnit.MINUTES.toMillis(1);
 
     /**
      * Handler message id for updating the time periodically in interactive mode.
@@ -120,6 +125,15 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             GoogleApiClient.OnConnectionFailedListener, DataApi.DataListener{
         static final String COLON_STRING = ":";
 
+        /** Alpha value for drawing time when in mute mode. */
+        static final int MUTE_ALPHA = 100;
+
+        /** Alpha value for drawing time when not in mute mode. */
+        static final int NORMAL_ALPHA = 255;
+
+        /** How often {@link #mUpdateTimeHandler} ticks in milliseconds. */
+        long mInteractiveUpdateRateMs = NORMAL_UPDATE_RATE_MS;
+
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(SunshineWearFace.this)
                 .addConnectionCallbacks(this)
@@ -128,6 +142,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                 .build();
 
         boolean mRegisteredTimeZoneReceiver = false;
+
         Paint mBackgroundPaint;
         Paint mHourPaint;
         Paint mMinutePaint;
@@ -136,6 +151,8 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         Paint mMinTempPaint;
         Paint mColonPaint;
         Paint mDividerPaint;
+
+        boolean mMute;
 
         boolean mAmbient;
 
@@ -147,6 +164,9 @@ public class SunshineWearFace extends CanvasWatchFaceService {
 
         private Bitmap mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
 
+        /**
+         * Handles time zone and locale changes.
+         */
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -155,6 +175,8 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                 invalidate();
             }
         };
+
+        boolean mShouldDrawColons;
         float mHourXOffset;
 //        float mMinuteXOffset;
         float mColonWidth;
@@ -206,7 +228,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             mMinTempPaint = createTextPaint(resources.getColor(R.color.digital_text_light));
 
             mColonPaint = new Paint();
-            mColonPaint = createTextPaint(resources.getColor(R.color.digital_text));
+            mColonPaint = createTextPaint(resources.getColor(R.color.digital_text), NORMAL_TYPEFACE);
 
             mDividerPaint = new Paint();
             mDividerPaint.setColor(resources.getColor(R.color.digital_text_light));
@@ -273,6 +295,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             }
             mRegisteredTimeZoneReceiver = true;
             IntentFilter filter = new IntentFilter(Intent.ACTION_TIMEZONE_CHANGED);
+            filter.addAction(Intent.ACTION_LOCALE_CHANGED);
             SunshineWearFace.this.registerReceiver(mTimeZoneReceiver, filter);
         }
 
@@ -315,6 +338,12 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         @Override
         public void onPropertiesChanged(Bundle properties) {
             super.onPropertiesChanged(properties);
+
+            boolean burnInProtection = properties.getBoolean(PROPERTY_BURN_IN_PROTECTION, false);
+            mHourPaint.setTypeface(burnInProtection ? THIN_TYPEFACE : NORMAL_TYPEFACE);
+            mMaxTempPaint.setTypeface(burnInProtection ? THIN_TYPEFACE : NORMAL_TYPEFACE);
+            mColonPaint.setTypeface(burnInProtection ? THIN_TYPEFACE : NORMAL_TYPEFACE);
+
             mLowBitAmbient = properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false);
         }
 
@@ -332,6 +361,9 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                     getResources().getColor(R.color.digital_text));
             adjustPaintColorToCurrentMode(mMinTempPaint, getResources().getColor(R.color.digital_text_light),
                     getResources().getColor(R.color.digital_text));
+            adjustPaintColorToCurrentMode(mDividerPaint, getResources().getColor(R.color.digital_text_light),
+                    getResources().getColor(R.color.digital_text));
+
             if (mAmbient != inAmbientMode) {
                 mAmbient = inAmbientMode;
                 if (mLowBitAmbient) {
@@ -341,6 +373,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                     mDatePaint.setAntiAlias(!inAmbientMode);
                     mMaxTempPaint.setAntiAlias(!inAmbientMode);
                     mMinTempPaint.setAntiAlias(!inAmbientMode);
+                    mDividerPaint.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
             }
@@ -354,6 +387,40 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                                                    int ambientColor) {
             paint.setColor(isInAmbientMode() ? ambientColor : interactiveColor);
         }
+
+        @Override
+        public void onInterruptionFilterChanged(int interruptionFilter) {
+            super.onInterruptionFilterChanged(interruptionFilter);
+
+            boolean inMuteMode = interruptionFilter == SunshineWearFace.INTERRUPTION_FILTER_NONE;
+            // We only need to update once a minute in mute mode.
+            setInteractiveUpdateRateMs(inMuteMode ? MUTE_UPDATE_RATE_MS : NORMAL_UPDATE_RATE_MS);
+
+            if (mMute != inMuteMode) {
+                mMute = inMuteMode;
+                int alpha = inMuteMode ? MUTE_ALPHA : NORMAL_ALPHA;
+                mHourPaint.setAlpha(alpha);
+                mMinutePaint.setAlpha(alpha);
+                mColonPaint.setAlpha(alpha);
+                mDatePaint.setAlpha(alpha);
+                mMaxTempPaint.setAlpha(alpha);
+                mMinTempPaint.setAlpha(alpha);
+                invalidate();
+            }
+        }
+
+        public void setInteractiveUpdateRateMs(long updateRateMs) {
+            if (updateRateMs == mInteractiveUpdateRateMs) {
+                return;
+            }
+            mInteractiveUpdateRateMs = updateRateMs;
+
+            // Stop and restart the timer so the new update rate takes effect immediately.
+            if (shouldTimerBeRunning()) {
+                updateTimer();
+            }
+        }
+
         /**
          * Captures tap event (and tap type) and toggles the background color if the user finishes
          * a tap.
@@ -377,6 +444,10 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             invalidate();
         }
 
+        private String formatTwoDigitNumber(int hour) {
+            return String.format("%02d", hour);
+        }
+
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
             // Draw the background.
@@ -398,27 +469,32 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             mCalendar.setTimeInMillis(now);
             mDate.setTime(now);
 
-            boolean mShouldDrawColons = (System.currentTimeMillis() % 1000) < 500;
+            // Show colons for the first half of each second so the colons blink on when the time
+            // updates.
+            mShouldDrawColons = (System.currentTimeMillis() % 1000) < 500;
 
+            // Draw the hours.
             float x = mHourXOffset;
             int hour = mCalendar.get(Calendar.HOUR);
             if (hour == 0) {
                 hour = 12;
             }
-            String hourString = String.format("%02d", hour);
+            String hourString = formatTwoDigitNumber(hour);
             canvas.drawText(hourString, x, mTimeYOffset, mHourPaint);
 
             x += mHourPaint.measureText(hourString);
 
-            if (isInAmbientMode() || mShouldDrawColons) {
+            if (isInAmbientMode() || mMute || mShouldDrawColons) {
                 canvas.drawText(COLON_STRING, x, mTimeYOffset, mColonPaint);
             }
             x += mColonWidth;
 
-            String minuteString = String.format("%02d", mCalendar.get(Calendar.MINUTE));
+            // Draw the minutes.
+            String minuteString = formatTwoDigitNumber(mCalendar.get(Calendar.MINUTE));
             canvas.drawText(minuteString, x, mTimeYOffset, mMinutePaint);
             x += mMinTempPaint.measureText(minuteString);
 
+            // Draw the days.
             if (getPeekCardPosition().isEmpty()) {
                 canvas.drawText(
                         mDateFormat.format(mDate),
@@ -428,7 +504,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             if (mMaxTemp != null && mMinTemp != null) {
 
                 float maxTextSize = mMaxTempPaint.measureText(mMaxTemp);
-//                float minTextSize = mMinTempPaint.measureText(mMinTemp);
                 float mWeatherXOffset = bounds.centerX() - (maxTextSize / 2);
                 canvas.drawText(mMaxTemp, mWeatherXOffset, mWeatherYOffset, mMaxTempPaint);
                 canvas.drawText(mMinTemp, mWeatherXOffset + maxTextSize - 10, mWeatherYOffset, mMinTempPaint);
@@ -468,8 +543,8 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             invalidate();
             if (shouldTimerBeRunning()) {
                 long timeMs = System.currentTimeMillis();
-                long delayMs = INTERACTIVE_UPDATE_RATE_MS
-                        - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
+                long delayMs =
+                        mInteractiveUpdateRateMs - (timeMs % mInteractiveUpdateRateMs);
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
             }
         }
