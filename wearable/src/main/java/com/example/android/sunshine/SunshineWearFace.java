@@ -135,6 +135,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         Paint mMaxTempPaint;
         Paint mMinTempPaint;
         Paint mColonPaint;
+        Paint mDividerPaint;
 
         boolean mAmbient;
 
@@ -142,7 +143,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         Date mDate;
         SimpleDateFormat mDateFormat;
 
-        String mDataDelivered = "No";
+//        String mDataDelivered = "No";
 
         private Bitmap mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
 
@@ -206,6 +207,11 @@ public class SunshineWearFace extends CanvasWatchFaceService {
 
             mColonPaint = new Paint();
             mColonPaint = createTextPaint(resources.getColor(R.color.digital_text));
+
+            mDividerPaint = new Paint();
+            mDividerPaint.setColor(resources.getColor(R.color.digital_text_light));
+            mDividerPaint.setAntiAlias(true);
+            mDividerPaint.setStrokeWidth(1f);
 
             mCalendar = Calendar.getInstance();
             mDate = new Date();
@@ -378,6 +384,13 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                 canvas.drawColor(Color.BLACK);
             } else {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
+                canvas.drawLine(
+                        bounds.centerX() - 30,
+                        bounds.centerY() + 15,
+                        bounds.centerX() + 30,
+                        bounds.centerY() + 15,
+                        mDividerPaint
+                );
             }
 
             // Draw H:MM in ambient mode or H:MM:SS in interactive mode.
@@ -489,7 +502,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                         });
                         fetchingBitmap.start();
 
-                        mDataDelivered = "Yes";
+//                        mDataDelivered = "Yes";
                         Log.d(TAG, "In onDataChanged: " + mMaxTemp + " " + mMinTemp);
                         invalidate();
                     }
