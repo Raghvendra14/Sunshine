@@ -77,6 +77,9 @@ public class SunshineWearFaceUtils {
     private void sendCurrentData(Cursor cursor, Context context) {
         PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/weather-info");
 
+        /* To check whether data is going or not*/
+        putDataMapRequest.getDataMap().putLong("current_time", System.currentTimeMillis());
+
         int weatherIcon = SunshineWeatherUtils.getSmallArtResourceIdForWeatherCondition(
                 cursor.getInt(cursor.getColumnIndex(WeatherContract.WeatherEntry.COLUMN_WEATHER_ID)));
 

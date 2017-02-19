@@ -75,6 +75,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
     private final String MAX_TEMP = "max_temp";
     private final String MIN_TEMP = "min_temp";
     private final String WEATHER_ICON = "weather_icon";
+    private final String TIMESTAMP = "current_time";
     private String mMaxTemp;
     private String mMinTemp;
     private Asset mWeatherIcon;
@@ -414,20 +415,16 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             if (mMaxTemp != null && mMinTemp != null) {
 
                 float maxTextSize = mMaxTempPaint.measureText(mMaxTemp);
-                float minTextSize = mMinTempPaint.measureText(mMinTemp);
+//                float minTextSize = mMinTempPaint.measureText(mMinTemp);
+                float mWeatherXOffset = bounds.centerX() - (maxTextSize / 2);
+                canvas.drawText(mMaxTemp, mWeatherXOffset, mWeatherYOffset, mMaxTempPaint);
+                canvas.drawText(mMinTemp, mWeatherXOffset + maxTextSize - 10, mWeatherYOffset, mMinTempPaint);
 
-                if (mAmbient) {
-                    float xAmbientOffset = bounds.centerX() - ((maxTextSize + minTextSize + 20) / 2);
-                    canvas.drawText(mMaxTemp, xAmbientOffset, mWeatherYOffset, mMaxTempPaint);
-                    canvas.drawText(mMinTemp, xAmbientOffset + maxTextSize + 20, mWeatherYOffset, mMinTempPaint);
-                } else {
-                    float mWeatherXOffset = bounds.centerX() - (maxTextSize / 2);
-                    float scaledWidth = (mMaxTempPaint.getTextSize() / mBitmap.getHeight()) * mBitmap.getWidth();
-                    Bitmap weatherIcon = Bitmap.createScaledBitmap(mBitmap, (int) scaledWidth, (int) mMaxTempPaint.getTextSize(), true);
-
-                    canvas.drawText(mMaxTemp, bounds.centerX() - ((weatherIcon.getWidth() / 2) + maxTextSize + 25), mWeatherYOffset, mMaxTempPaint);
-                    canvas.drawText(mMinTemp, bounds.centerX() + (weatherIcon.getWidth() / 2) + 25, mWeatherYOffset, mMinTempPaint);
-                    canvas.drawBitmap(weatherIcon, mWeatherXOffset, mWeatherYOffset - weatherIcon.getHeight(), null);
+                if (!mAmbient) {
+                    float scaledWidth = (mMaxTempPaint.getTextSize() / mBitmap.getHeight()) * mBitmap.getWidth() + 15;
+                    Bitmap weatherIcon = Bitmap.createScaledBitmap(mBitmap, (int) scaledWidth, (int) mMaxTempPaint.getTextSize() + 15, true);
+                    float mWeatherIconXOffset = mWeatherXOffset - weatherIcon.getWidth() - 10;
+                    canvas.drawBitmap(weatherIcon, mWeatherIconXOffset, mWeatherYOffset - weatherIcon.getHeight() + 15, null);
                 }
             }
 
@@ -480,6 +477,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                     if (dataItem.getUri().getPath().equals(
                             WEATHER_PATH)) {
                         DataMap dataMap = DataMapItem.fromDataItem(dataItem).getDataMap();
+                        long timestamp = dataMap.getLong(TIMESTAMP);
                         mMaxTemp = dataMap.getString(MAX_TEMP);
                         mMinTemp = dataMap.getString(MIN_TEMP);
                         mWeatherIcon = dataMap.getAsset(WEATHER_ICON);
