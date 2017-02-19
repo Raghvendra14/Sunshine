@@ -21,6 +21,7 @@ import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -68,14 +69,26 @@ public class SunshineWearFaceUtils {
     private Asset createAssetFromDrawable(int weatherIcon, Context context) {
         Drawable drawable = context.getResources().getDrawable(weatherIcon);
         Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
-        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
-        return Asset.createFromBytes(byteStream.toByteArray());
+        ByteArrayOutputStream byteStream = null;
+        try {
+            byteStream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
+            return Asset.createFromBytes(byteStream.toByteArray());
+        } finally {
+            if (null != byteStream) {
+                try {
+                    byteStream.close();
+                } catch (IOException e) {
+                    //ignore
+                }
+            }
+        }
     }
 
     /* This method creates dataItem into DataMap form and sends them to the wearable */
     private void sendCurrentData(Cursor cursor, Context context) {
         PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/weather-info");
+        putDataMapRequest.setUrgent();
 
         /* To check whether data is going or not*/
         putDataMapRequest.getDataMap().putLong("current_time", System.currentTimeMillis());
