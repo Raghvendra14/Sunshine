@@ -440,14 +440,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                     canvas.drawBitmap(weatherIcon, mWeatherIconXOffset, mWeatherYOffset - weatherIcon.getHeight() + 15, null);
                 }
             }
-
-//            String text = mAmbient
-//                    ? String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
-//                    mCalendar.get(Calendar.MINUTE))
-//                    : String.format("%d:%02d:%02d", mCalendar.get(Calendar.HOUR),
-//                    mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
-//            String text = mDataDelivered;
-//            canvas.drawText(text, mHourXOffset, mTimeYOffset, mHourPaint);
         }
 
         /**
