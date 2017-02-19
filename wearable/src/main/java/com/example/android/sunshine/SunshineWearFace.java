@@ -160,8 +160,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         Date mDate;
         SimpleDateFormat mDateFormat;
 
-//        String mDataDelivered = "No";
-
         private Bitmap mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
 
         /**
@@ -178,7 +176,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
 
         boolean mShouldDrawColons;
         float mHourXOffset;
-//        float mMinuteXOffset;
         float mColonWidth;
         float mTimeYOffset;
 
@@ -409,7 +406,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             }
         }
 
-        public void setInteractiveUpdateRateMs(long updateRateMs) {
+        private void setInteractiveUpdateRateMs(long updateRateMs) {
             if (updateRateMs == mInteractiveUpdateRateMs) {
                 return;
             }
@@ -460,8 +457,7 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                         bounds.centerY() + 15,
                         bounds.centerX() + 30,
                         bounds.centerY() + 15,
-                        mDividerPaint
-                );
+                        mDividerPaint);
             }
 
             // Draw H:MM in ambient mode or H:MM:SS in interactive mode.
@@ -569,7 +565,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                         });
                         fetchingBitmap.start();
 
-//                        mDataDelivered = "Yes";
                         Log.d(TAG, "In onDataChanged: " + mMaxTemp + " " + mMinTemp);
                         invalidate();
                     }
