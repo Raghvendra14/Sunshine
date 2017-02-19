@@ -182,6 +182,8 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         float mDateXOffset;
         float mDateYOffset;
 
+        float mDividerYOffset;
+
         float mWeatherYOffset;
 
         /**
@@ -201,9 +203,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                     .setShowSystemUiTime(false)
                     .build());
             Resources resources = SunshineWearFace.this.getResources();
-            mTimeYOffset = resources.getDimension(R.dimen.digital_y_offset);
-            mDateYOffset = resources.getDimension(R.dimen.digital_date_y_offset);
-            mWeatherYOffset = resources.getDimension(R.dimen.digital_weather_y_offset);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
@@ -311,6 +310,13 @@ public class SunshineWearFace extends CanvasWatchFaceService {
             Resources resources = SunshineWearFace.this.getResources();
             boolean isRound = insets.isRound();
 
+            mTimeYOffset =  resources.getDimension(isRound
+                    ? R.dimen.digital_y_offset_round : R.dimen.digital_y_offset);
+            mDateYOffset = resources.getDimension(isRound
+                    ? R.dimen.digital_date_y_offset_round : R.dimen.digital_date_y_offset);
+            mWeatherYOffset = resources.getDimension(isRound
+                    ? R.dimen.digital_weather_y_offset_round : R.dimen.digital_weather_y_offset);
+
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
             float dateSize = resources.getDimension(isRound
@@ -327,7 +333,9 @@ public class SunshineWearFace extends CanvasWatchFaceService {
 
             mHourXOffset = mHourPaint.measureText("0000") / 2;
             mColonWidth = mColonPaint.measureText(COLON_STRING);
-            mDateXOffset = mDatePaint.measureText("XXX XXX 03 2017") / 4;
+            float dateOffset = mDatePaint.measureText("XXX XXX 03 2017") / 4;
+            mDateXOffset = isRound ? dateOffset : dateOffset + 15 ;
+            mDividerYOffset = isRound ? 15 : 20;
         }
 
         @Override
@@ -429,9 +437,9 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
                 canvas.drawLine(
                         bounds.centerX() - 30,
-                        bounds.centerY() + 15,
+                        bounds.centerY() + mDividerYOffset,
                         bounds.centerX() + 30,
-                        bounds.centerY() + 15,
+                        bounds.centerY() + mDividerYOffset,
                         mDividerPaint);
             }
 
