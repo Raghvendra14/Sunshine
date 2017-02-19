@@ -195,7 +195,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
-            Log.d(TAG, "In onCreate: ");
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(SunshineWearFace.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
@@ -548,7 +547,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
                         });
                         fetchingBitmap.start();
 
-                        Log.d(TAG, "In onDataChanged: " + mMaxTemp + " " + mMinTemp);
                         invalidate();
                     }
                 }
@@ -579,7 +577,6 @@ public class SunshineWearFace extends CanvasWatchFaceService {
 
         @Override
         public void onConnected(@Nullable Bundle bundle) {
-            Log.d(TAG, "onConnected " + Long.toString(System.currentTimeMillis()));
             if (Log.isLoggable(TAG, Log.DEBUG)) {
                 Log.d(TAG, "onConnected: " + bundle);
             }
